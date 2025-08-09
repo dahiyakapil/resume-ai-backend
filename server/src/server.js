@@ -40,7 +40,7 @@ app.use(session({
 
 
 
-app.use("/health-check", (req, res) => {
+app.use("/healthcheck", (req, res) => {
     res.send("ScanHire AI Platform Backend is running....")
 })
 
