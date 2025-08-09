@@ -1,30 +1,28 @@
-// server.js
 import dotenv from "dotenv";
 dotenv.config();
-
-import express from "express";
 import cors from "cors";
-import session from "express-session";
+import express from "express";
+import { db } from "./config/db.js";
 import cookieParser from "cookie-parser";
-import morgan from "morgan";
-import { dbConnect } from "./config/dbConnect.js";
-
-// Import your routers (replace with real implementations)
 import authRouter from "./routes/auth.route.js";
 import resumeRouter from "./routes/resume.routes.js";
-import jobMatchRouter from "./routes/jobMatch.route.js";
+import session from "express-session";
+import morgan from "morgan";
+import jobMatchrouter from "./routes/jobMatch.route.js";
 
 const app = express();
+app.use(morgan("dev"));
 const PORT = process.env.PORT || 5000;
+
+// Middlewares
+app.use(express.json());
+app.use(cookieParser());
+
 
 // If behind a proxy (Render, Heroku, etc.) enable trust proxy so secure cookies work
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1); // trust first proxy
 }
-
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(cookieParser());
 
 // Allowed origins list
 const allowedOrigins = [
@@ -70,22 +68,23 @@ app.use(
   })
 );
 
-// Basic healthcheck
-app.get("/healthcheck", (req, res) => res.send("Backend is running"));
+
+// Health check
+app.use("/healthcheck", (req, res) => {
+  res.send("ScanHire AI Platform Backend is running....");
+});
 
 // Routes
 app.use("/auth", authRouter);
 app.use("/resume", resumeRouter);
-app.use("/job", jobMatchRouter);
+app.use("/job", jobMatchrouter);
 
-// Connect DB then start server
-dbConnect()
+db()
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
+      console.log(`Server is running at http://localhost:${PORT}`);
     });
   })
-  .catch((err) => {
-    console.error("DB connection failed:", err);
-    process.exit(1);
+  .catch((error) => {
+    console.log("MONGO db Connection failed !!!", error);
   });
