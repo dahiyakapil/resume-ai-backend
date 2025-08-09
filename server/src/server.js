@@ -22,20 +22,22 @@ app.use(cookieParser())
 
 
 app.use(cors({
-    origin: `${process.env.CLIENT_URL}`, 
+    origin: process.env.CLIENT_URL, 
     credentials: true 
 }));
 
-app.use(session({
-  secret: "dev-secret", 
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, 
-    httpOnly: true,
-    sameSite: "lax"
-  }
-}));
+app.use(
+  session({
+    secret: "dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true, 
+      httpOnly: true,
+      sameSite: "none",
+    },
+  })
+);
 
 
 
