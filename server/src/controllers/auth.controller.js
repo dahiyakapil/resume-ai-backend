@@ -19,7 +19,7 @@ export const signUp = async (req, res) => {
         res.cookie("token", token, {
             httpOnly: true,
             secure: false, // set true in production
-            sameSite: "lax",
+            sameSite: "none",  
             expires: new Date(Date.now() + 8 * 3600000),
         });
 

@@ -11,6 +11,11 @@ import morgan from "morgan";
 import jobMatchrouter from "./routes/jobMatch.route.js";
 
 const app = express();
+
+
+// Trust proxy BEFORE cookies or sessions
+app.set("trust proxy", 1);
+
 app.use(morgan("dev"));
 const PORT = process.env.PORT || 5000;
 
@@ -18,24 +23,11 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Multi-Origin CORS
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173"
-];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: process.env.CLIENT_URL, 
+  credentials: true 
+}));
 
 // ✅ Session config for prod & dev
 app.use(
