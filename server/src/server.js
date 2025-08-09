@@ -2,13 +2,14 @@ import dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import express from "express";
-import { db } from "./config/db.js";
+
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.route.js";
 import resumeRouter from "./routes/resume.routes.js";
 import session from "express-session";
 import morgan from "morgan";
 import jobMatchrouter from "./routes/jobMatch.route.js";
+import { dbConnect } from "./config/dbConnect.js";
 
 const app = express();
 app.use(morgan("dev"));
@@ -79,7 +80,7 @@ app.use("/auth", authRouter);
 app.use("/resume", resumeRouter);
 app.use("/job", jobMatchrouter);
 
-db()
+dbConnect()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running at http://localhost:${PORT}`);
