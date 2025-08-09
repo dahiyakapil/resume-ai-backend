@@ -1,8 +1,8 @@
 import axios from "axios";
 
 export const jobMatchDeepSeekResponse = async (prompt) => {
-  const modelId = "mistralai/mixtral-8x7b-instruct"; // ✅ Working model
-  const apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+  const modelId = `${process.env.OPENROUTER_MODEL}` 
+  const apiUrl = `${process.env.OPENROUTER_CHAT_COMPLETIONS}`;
 
   try {
     const response = await axios.post(

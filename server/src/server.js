@@ -41,7 +41,7 @@ app.use(session({
 
 
 app.use("/health-check", (req, res) => {
-    res.send("Dev Connect Backend is running....")
+    res.send("ScanHire AI Platform Backend is running....")
 })
 
 
