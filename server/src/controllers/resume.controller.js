@@ -53,9 +53,68 @@ import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionW
 
 
 // ✅ Analyze Resume - POST /resume/analyze
+// export const analyzeResume = async (req, res) => {
+//   const filePath = req.file?.path;
+//   const resumeName = req.file?.originalname || "resume.pdf"; // ✅ Extract file name
+
+//   try {
+//     if (!filePath) return res.status(400).json({ error: "No file uploaded" });
+
+//     const extractedText = await extractPdfText(filePath);
+//     if (!extractedText || extractedText.trim().length < 20) {
+//       return res.status(422).json({ error: "Text extraction failed or resume is too short" });
+//     }
+
+//     const resumeUrl = await uploadToCloudinary(filePath);
+//     const aiReportRaw = await analyzeWithOpenRouter(extractedText);
+
+//     // ✅ Limit buzzwords to top 10 and exclude ATS sections
+//     const atsKeywords = [
+//       "summary", "experience", "project", "skill", "education", "certification", "award", "honor"
+//     ];
+
+//     const buzzwords = (aiReportRaw.buzzwords || []).filter(
+//       (word, index) =>
+//         index < 15 && !atsKeywords.some((keyword) => word.toLowerCase().includes(keyword))
+//     ).slice(0, 10);
+
+//     const aiReport = {
+//       ...aiReportRaw,
+//       buzzwords
+//     };
+
+//     const savedReport = await ResumeReport.create({
+//       user: req.user._id,
+//       fileUrl: resumeUrl,
+//       aiFeedback: JSON.stringify(aiReport),
+//       score: aiReport.ats_score || 0,
+//       resumeName, // ✅ Save filename
+//     });
+
+//     return res.status(200).json({
+//       message: "Resume analyzed and saved successfully",
+//       resumeUrl,
+//       analysis: aiReport,
+//       reportId: savedReport._id,
+//       createdAt: savedReport.createdAt,
+//       resumeName, // ✅ Return filename
+//     });
+
+//   } catch (err) {
+//     return res.status(500).json({ error: "Resume analysis failed: " + err.message });
+//   } finally {
+//     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+//   }
+// };
+
+
+
+// ✅ Analyze Resume + Rewrite Bullet Points - POST /resume/analyze
+// ✅ Analyze Resume - POST /resume/analyze
+
 export const analyzeResume = async (req, res) => {
   const filePath = req.file?.path;
-  const resumeName = req.file?.originalname || "resume.pdf"; // ✅ Extract file name
+  const resumeName = req.file?.originalname || "resume.pdf";
 
   try {
     if (!filePath) return res.status(400).json({ error: "No file uploaded" });
@@ -68,7 +127,6 @@ export const analyzeResume = async (req, res) => {
     const resumeUrl = await uploadToCloudinary(filePath);
     const aiReportRaw = await analyzeWithOpenRouter(extractedText);
 
-    // ✅ Limit buzzwords to top 10 and exclude ATS sections
     const atsKeywords = [
       "summary", "experience", "project", "skill", "education", "certification", "award", "honor"
     ];
@@ -80,34 +138,88 @@ export const analyzeResume = async (req, res) => {
 
     const aiReport = {
       ...aiReportRaw,
-      buzzwords
+      buzzwords,
     };
+
+    // ✨ Rewrite suggestions (only from project section)
+    const lines = extractedText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const projectSectionStart = lines.findIndex((line) =>
+      /projects?/i.test(line)
+    );
+    const projectSectionEnd = lines.findIndex(
+      (line, i) => i > projectSectionStart && /^(skills?|education|experience|certifications?|awards?)/i.test(line)
+    );
+
+    const projectLines = lines.slice(
+      projectSectionStart + 1,
+      projectSectionEnd > -1 ? projectSectionEnd : lines.length
+    );
+
+    const bulletPointsOnly = projectLines.filter((line) => {
+      const trimmed = line.trim();
+      const looksLikeBullet =
+        /^[\u2022\-•*]/.test(trimmed) || /^[A-Z].+\.$/.test(trimmed) || trimmed.length > 30;
+
+      const lower = trimmed.toLowerCase();
+      const skipPatterns = [
+        /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
+        /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
+      ];
+
+      return looksLikeBullet && !skipPatterns.some((p) => p.test(lower));
+    });
+
+
+
+    const rewrites = await Promise.all(
+      bulletPointsOnly
+        .filter((line) => {
+          const lower = line.toLowerCase();
+          const skipPatterns = [
+            /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
+            /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
+          ];
+
+          return (
+            line.length > 10 &&
+            !skipPatterns.some((p) => p.test(lower))
+          );
+        })
+        .map(async (line) => ({
+          original: line,
+          rewritten: await rewriteAISuggestionWithOpenRouter(line),
+        }))
+    );
 
     const savedReport = await ResumeReport.create({
       user: req.user._id,
       fileUrl: resumeUrl,
       aiFeedback: JSON.stringify(aiReport),
       score: aiReport.ats_score || 0,
-      resumeName, // ✅ Save filename
+      resumeName,
+      rewrites,
     });
 
     return res.status(200).json({
       message: "Resume analyzed and saved successfully",
       resumeUrl,
       analysis: aiReport,
+      rewrites,
       reportId: savedReport._id,
       createdAt: savedReport.createdAt,
-      resumeName, // ✅ Return filename
+      resumeName,
     });
-
   } catch (err) {
+    console.error("❌ Resume analysis failed:", err);
     return res.status(500).json({ error: "Resume analysis failed: " + err.message });
   } finally {
     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 };
-
-
 
 
 
@@ -303,7 +415,7 @@ export const reanalyzeResume = async (req, res) => {
   } finally {
     try {
       tmpFile?.cleanup?.();
-    } catch {}
+    } catch { }
   }
 };
 
@@ -451,13 +563,13 @@ export const downloadResumeReportPdf = async (req, res) => {
     });
 
     // --- Footer
-     doc
+    doc
       .fontSize(10)
       .fillColor("gray")
       .text("Generated by Resume IQ – AI Resume Analyzer", {
         align: "center",
       })
-      
+
 
     doc.end();
   } catch (err) {

@@ -3,7 +3,7 @@ import { validateSignupData } from "../utils/validation.js";
 import bcrypt from "bcrypt"
 import validator from "validator"
 
-const signUp = async (req, res) => {
+export const signUp = async (req, res) => {
     try {
         validateSignupData(req);
 
@@ -31,7 +31,7 @@ const signUp = async (req, res) => {
     }
 };
 
-const login = async (req, res) => {
+export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -72,14 +72,14 @@ const login = async (req, res) => {
 }
 
 
-const logout = async (req, res) => {
+export const logout = async (req, res) => {
     res.cookie("token", null, { expires: new Date(Date.now()) });
     res.send("Logged Out Successfully")
 }
 
 
 // GET /auth/me
-const getLoggedInUser = async (req, res) => {
+export const getLoggedInUser = async (req, res) => {
     try {
         const user = req.user;
 
@@ -96,5 +96,88 @@ const getLoggedInUser = async (req, res) => {
     }
 };
 
+export const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
-export { signUp, login, logout, getLoggedInUser }
+
+export const updateProfile = async (req, res) => {
+  const { firstName, lastName, email } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.firstName = firstName || user.firstName;
+    user.lastName = lastName || user.lastName;
+    user.email = email || user.email;
+
+    await user.save();
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const updatePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Current password is incorrect" });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateAvatar = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.avatar = req.body.style || "micah";
+    await user.save();
+
+    res.json({
+      message: "Avatar updated successfully",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: user.avatar, // ✅ return updated avatar
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

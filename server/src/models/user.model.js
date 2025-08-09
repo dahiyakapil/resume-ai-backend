@@ -48,12 +48,27 @@ const userSchema = new mongoose.Schema({
                 "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character",
         },
     },
+    avatar: {
+        type: String,
+        default: "micah", // or any default avatar style
+    },
 
 
 }, { timestamps: true });
 
 
 userSchema.index({ firstName: 1, lastName: 1 });
+
+
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
+
+
 
 userSchema.methods.getJWT = async function () {
     const user = this;
@@ -71,6 +86,5 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
     return isPasswordValid;
 
 }
-
 
 export default mongoose.model("User", userSchema)

@@ -5,10 +5,11 @@ import express from "express";
 import { db } from "./config/db.js";
 import cookieParser from "cookie-parser"
 import authRouter from "./routes/auth.route.js"
-import resumeReportRouter from "./routes/resume.routes.js";
+import resumeRouter from "./routes/resume.routes.js";
 import session from "express-session";
 
 import morgan from "morgan";
+import jobMatchrouter from "./routes/jobMatch.route.js";
 
 
 const app = express();
@@ -46,7 +47,8 @@ app.use("/health-check", (req, res) => {
 
 // Routes
 app.use("/auth", authRouter);
-app.use("/resume", resumeReportRouter)
+app.use("/resume", resumeRouter)
+app.use("/job", jobMatchrouter)
 
 
 db()

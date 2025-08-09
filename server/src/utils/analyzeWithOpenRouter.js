@@ -95,7 +95,7 @@
 //     };
 //   }
 
-  
+
 
 
 
@@ -305,7 +305,8 @@ ${truncatedResumeText}
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "mistralai/mixtral-8x7b-instruct",
+        
+        model: `${process.env.OPENROUTER_MODEL}`,
         messages: [
           { role: "system", content: "You are an expert ATS resume analyzer." },
           { role: "user", content: prompt },
@@ -319,11 +320,11 @@ ${truncatedResumeText}
         },
       }
     );
-
     let result = response.data.choices[0].message.content;
+    console.log("🧠 OpenRouter AI Raw Response:", result);
 
-    // Step 1: Clean common JSON issues
     result = result
+      .replace(/```json|```/g, "") // Remove markdown
       .replace(/\\n/g, " ")
       .replace(/\\"/g, '"')
       .replace(/\\_/g, "_")
@@ -332,8 +333,15 @@ ${truncatedResumeText}
       .replace(/\s{2,}/g, " ")
       .trim();
 
-    // Step 2: Try parsing cleaned response
-    const parsed = JSON.parse(result);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(result);
+    } catch (e) {
+      console.error("❌ JSON parse error:", e.message);
+      console.error("🔍 Raw AI content:", result);
+      return { error: "Invalid JSON from OpenRouter." };
+    }
 
     // Step 3: Merge fallback for missing sections
     const fallbackMissing = checkMissingSections(truncatedResumeText);
