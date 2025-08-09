@@ -7,7 +7,7 @@ import cors from "cors";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
-import { dbConnect } from "./config/db.js";
+import { dbConnect } from "./config/dbConnect.js";
 
 // Import your routers (replace with real implementations)
 import authRouter from "./routes/auth.route.js";
