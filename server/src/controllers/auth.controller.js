@@ -5,20 +5,25 @@ import validator from "validator"
 
 export const signUp = async (req, res) => {
     try {
+        // Validate request body
         validateSignupData(req);
 
         const { firstName, lastName, email, password } = req.body;
 
-        // ✅ Let pre("save") hook handle password hashing
-        const user = new User({ firstName, lastName, email, password });
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
 
-        const saveUser = await user.save();
+        // Create new user
+        const user = new User({ firstName, lastName, email, password: passwordHash });
+        const savedUser = await user.save();
 
-        const token = await saveUser.getJWT();
+        // Generate JWT token
+        const token = savedUser.getJWT();
 
+        // Set secure cookie (secure = true in production)
         res.cookie("token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production", // secure only in prod
+            secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(Date.now() + 8 * 3600000), // 8 hours
         });
@@ -26,17 +31,17 @@ export const signUp = async (req, res) => {
         return res.status(201).json({
             message: "User created successfully",
             data: {
-                id: saveUser._id,
-                firstName: saveUser.firstName,
-                lastName: saveUser.lastName,
-                email: saveUser.email,
-                avatar: saveUser.avatar
+                id: savedUser._id,
+                firstName: savedUser.firstName,
+                lastName: savedUser.lastName,
+                email: savedUser.email
             }
         });
 
     } catch (error) {
+        console.error("Signup error:", error);
         return res.status(400).json({
-            error: "Error in creating the user: " + error.message
+            error: error.message || "Error in creating the user"
         });
     }
 };
