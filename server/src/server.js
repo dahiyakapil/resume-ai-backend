@@ -45,6 +45,10 @@ app.use(
   })
 );
 
+app.get("/", (req, res) => {
+  res.json({ message: "Server is running fine 🚀" });
+});
+
 // Health check
 app.use("/healthcheck", (req, res) => {
   res.send("ScanHire AI Platform Backend is running....");
