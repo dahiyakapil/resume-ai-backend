@@ -38,24 +38,6 @@ app.use(express.json());
 app.use(cookieParser());
 
 
-
-
-// ✅ Session config for prod & dev
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    proxy: true, // Add this
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 8 * 3600000 // 8 hours
-    }
-  })
-);
-
 app.get("/", (req, res) => {
   res.json({ message: "Server is running fine 🚀" });
 });
