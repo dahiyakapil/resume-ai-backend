@@ -1,7 +1,8 @@
 import express from "express"
-import { getLoggedInUser, login, logout, signUp, updateAvatar, updatePassword, updateProfile } from "../controllers/auth.controller.js";
+
 import { userAuth } from "../middlewares/auth.middleware.js";
-import passport from "passport";
+import { getCurrentUser, login, logout, signUp, updateAvatar, updatePassword, updateProfile } from "../controllers/auth.controller.js";
+
 
 const authRouter = express.Router();
 
@@ -13,13 +14,15 @@ authRouter.post("/login", login)
 
 authRouter.post("/logout", logout)
 
-authRouter.get("/me", userAuth, getLoggedInUser);
+authRouter.get("/me", userAuth, getCurrentUser);
 
 authRouter.put("/update-profile", userAuth,  updateProfile)
 
 authRouter.put("/update-password", userAuth, updatePassword)
 
 authRouter.put("/update-avatar", userAuth, updateAvatar);
+
+
 
 
 

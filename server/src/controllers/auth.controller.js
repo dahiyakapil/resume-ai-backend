@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import { validateSignupData } from "../utils/validation.js";
-import bcrypt from "bcrypt"
-import validator from "validator"
+import bcrypt from "bcrypt";
+import validator from "validator";
 
 export const signUp = async (req, res) => {
   try {
@@ -9,25 +9,15 @@ export const signUp = async (req, res) => {
 
     const { firstName, lastName, email, password } = req.body;
 
-    // ✅ Let pre("save") hook handle password hashing
     const user = new User({ firstName, lastName, email, password });
-
     const saveUser = await user.save();
 
     const token = await saveUser.getJWT();
 
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000),
-      path: "/"
-    });
-
     return res.status(201).json({
       message: "User created successfully",
-      data: {
+      token, 
+      user: {
         id: saveUser._id,
         firstName: saveUser.firstName,
         lastName: saveUser.lastName,
@@ -37,9 +27,7 @@ export const signUp = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(400).json({
-      error: "Error in creating the user: " + error.message
-    });
+    return res.status(400).json({ error: "Error creating user: " + error.message });
   }
 };
 
@@ -63,20 +51,9 @@ export const login = async (req, res) => {
 
     const token = await user.getJWT();
 
-
-
-    const isProd = process.env.NODE_ENV === "production";
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000),
-      path: "/" // Add this
-    });
-
-
     return res.json({
       message: "Logged in Successfully",
+      token, // <-- send token in response
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -106,23 +83,7 @@ export const logout = async (req, res) => {
 }
 
 
-// GET /auth/me
-export const getLoggedInUser = async (req, res) => {
-  try {
-    const user = req.user;
 
-    if (!user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    // Remove sensitive data
-    const { password, ...safeUser } = user.toObject();
-
-    res.status(200).json({ user: safeUser });
-  } catch (error) {
-    res.status(500).json({ error: "Server error: " + error.message });
-  }
-};
 
 export const getCurrentUser = async (req, res) => {
   try {
