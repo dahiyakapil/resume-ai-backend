@@ -8,9 +8,9 @@ export const signUp = async (req, res) => {
         validateSignupData(req);
 
         const { firstName, lastName, email, password } = req.body;
-        const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = new User({ firstName, lastName, email, password: passwordHash });
+        // ✅ Let pre("save") hook handle password hashing
+        const user = new User({ firstName, lastName, email, password });
 
         const saveUser = await user.save();
 
@@ -18,16 +18,26 @@ export const signUp = async (req, res) => {
 
         res.cookie("token", token, {
             httpOnly: true,
-            secure: false, // set true in production
-            sameSite: "none",  
-            expires: new Date(Date.now() + 8 * 3600000),
+            secure: process.env.NODE_ENV === "production", // secure only in prod
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            expires: new Date(Date.now() + 8 * 3600000), // 8 hours
         });
 
-
-        return res.status(201).json({ message: "User created successfully", data: saveUser });
+        return res.status(201).json({
+            message: "User created successfully",
+            data: {
+                id: saveUser._id,
+                firstName: saveUser.firstName,
+                lastName: saveUser.lastName,
+                email: saveUser.email,
+                avatar: saveUser.avatar
+            }
+        });
 
     } catch (error) {
-        return res.status(400).json({ error: "Error in creating the user: " + error.message });
+        return res.status(400).json({
+            error: "Error in creating the user: " + error.message
+        });
     }
 };
 
@@ -40,13 +50,11 @@ export const login = async (req, res) => {
         }
 
         const user = await User.findOne({ email });
-
         if (!user) {
             return res.status(401).json({ error: "Invalid Credentials" });
         }
 
         const isPasswordValid = await user.validatePassword(password);
-
         if (!isPasswordValid) {
             return res.status(401).json({ error: "Invalid Credentials" });
         }
@@ -55,21 +63,26 @@ export const login = async (req, res) => {
 
         res.cookie("token", token, {
             httpOnly: true,
-            secure: false, // set true in production
-            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(Date.now() + 8 * 3600000),
         });
 
-
         return res.json({
             message: "Logged in Successfully",
-            user,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                avatar: user.avatar
+            }
         });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 
 export const logout = async (req, res) => {
