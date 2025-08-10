@@ -96,25 +96,32 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(morgan("dev"));
-
 // ✅ 3. JSON + Cookie Parser
 app.use(express.json());
 app.use(cookieParser());
 
+app.use(morgan("dev"));
+
+
+
+
+
 // ✅ 4. Session configuration
+const isProd = process.env.NODE_ENV === "production";
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // secure cookies only in prod
+      secure: isProd,              // HTTPS only in production
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    },
+      sameSite: isProd ? "none" : "lax"
+    }
   })
 );
+
 
 // ✅ 5. Routes
 app.get("/", (req, res) => {
@@ -124,6 +131,7 @@ app.get("/", (req, res) => {
 app.use("/healthcheck", (req, res) => {
   res.send("ScanHire AI Platform Backend is running....");
 });
+
 
 app.use("/auth", authRouter);
 app.use("/resume", resumeRouter);
@@ -139,3 +147,5 @@ dbConnect()
   .catch((error) => {
     console.error("MONGO DB connection failed !!!", error);
   });
+
+
