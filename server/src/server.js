@@ -103,26 +103,6 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 
 
-
-
-
-// ✅ 4. Session configuration
-const isProd = process.env.NODE_ENV === "production";
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: isProd,              // HTTPS only in production
-      httpOnly: true,
-      sameSite: isProd ? "none" : "lax"
-    }
-  })
-);
-
-
 // ✅ 5. Routes
 app.get("/", (req, res) => {
   res.json({ message: "Server is running fine 🚀" });
