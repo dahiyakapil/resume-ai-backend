@@ -16,17 +16,19 @@ const app = express();
 // Trust proxy BEFORE cookies or sessions
 app.set("trust proxy", 1);
 
-const allowedOrigins = [
-  "https://scanhire.vercel.app",
-  "http://localhost:5173" // for local dev
-];
+const allowedOrigins = process.env.CLIENT_URL.split(",");
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true, // ✅ needed if you send cookies or auth headers
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  exposedHeaders: ["Set-Cookie"] // Ensure cookies can be read by client
 }));
-
-app.options("*", cors()); 
 
 app.use(morgan("dev"));
 const PORT = process.env.PORT || 5000;
@@ -34,6 +36,7 @@ const PORT = process.env.PORT || 5000;
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
+
 
 
 app.get("/", (req, res) => {
