@@ -42,9 +42,9 @@ app.use("/healthcheck", (req, res) => {
 });
 
 // Routes
-app.use("/auth", authRouter);
-app.use("/resume", resumeRouter);
-app.use("/job", jobMatchrouter);
+app.use("/api/auth", authRouter);
+app.use("/api/resume", resumeRouter);
+app.use("/api/job", jobMatchrouter);
 
 dbConnect()
   .then(() => {
