@@ -112,6 +112,11 @@ import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionW
 // ✅ Analyze Resume + Rewrite Bullet Points - POST /resume/analyze
 // ✅ Analyze Resume - POST /resume/analyze
 
+
+
+
+// ***********************************************
+
 export const analyzeResume = async (req, res) => {
   const filePath = req.file?.path;
   const resumeName = req.file?.originalname || "resume.pdf";
