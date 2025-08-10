@@ -4,109 +4,112 @@ import bcrypt from "bcrypt"
 import validator from "validator"
 
 export const signUp = async (req, res) => {
-    try {
-        validateSignupData(req);
+  try {
+    validateSignupData(req);
 
-        const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password } = req.body;
 
-        // ✅ Let pre("save") hook handle password hashing
-        const user = new User({ firstName, lastName, email, password });
+    // ✅ Let pre("save") hook handle password hashing
+    const user = new User({ firstName, lastName, email, password });
 
-        const saveUser = await user.save();
+    const saveUser = await user.save();
 
-        const token = await saveUser.getJWT();
+    const token = await saveUser.getJWT();
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production", // secure only in prod
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            expires: new Date(Date.now() + 8 * 3600000), // 8 hours
-        });
+    const isProd = process.env.NODE_ENV === "production";
 
-        return res.status(201).json({
-            message: "User created successfully",
-            data: {
-                id: saveUser._id,
-                firstName: saveUser.firstName,
-                lastName: saveUser.lastName,
-                email: saveUser.email,
-                avatar: saveUser.avatar
-            }
-        });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      expires: new Date(Date.now() + 8 * 3600000)
+    });
 
-    } catch (error) {
-        return res.status(400).json({
-            error: "Error in creating the user: " + error.message
-        });
-    }
+
+    return res.status(201).json({
+      message: "User created successfully",
+      data: {
+        id: saveUser._id,
+        firstName: saveUser.firstName,
+        lastName: saveUser.lastName,
+        email: saveUser.email,
+        avatar: saveUser.avatar
+      }
+    });
+
+  } catch (error) {
+    return res.status(400).json({
+      error: "Error in creating the user: " + error.message
+    });
+  }
 };
 
 export const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: "Email is not valid" });
-        }
-
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ error: "Invalid Credentials" });
-        }
-
-        const isPasswordValid = await user.validatePassword(password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: "Invalid Credentials" });
-        }
-
-        const token = await user.getJWT();
-
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            expires: new Date(Date.now() + 8 * 3600000),
-        });
-
-        return res.json({
-            message: "Logged in Successfully",
-            user: {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                avatar: user.avatar
-            }
-        });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ error: "Email is not valid" });
     }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid Credentials" });
+    }
+
+    const isPasswordValid = await user.validatePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid Credentials" });
+    }
+
+    const token = await user.getJWT();
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+
+    return res.json({
+      message: "Logged in Successfully",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: user.avatar
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 
 export const logout = async (req, res) => {
-    res.cookie("token", null, { expires: new Date(Date.now()) });
-    res.send("Logged Out Successfully")
+  res.cookie("token", null, { expires: new Date(Date.now()) });
+  res.send("Logged Out Successfully")
 }
 
 
 // GET /auth/me
 export const getLoggedInUser = async (req, res) => {
-    try {
-        const user = req.user;
+  try {
+    const user = req.user;
 
-        if (!user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-
-        // Remove sensitive data
-        const { password, ...safeUser } = user.toObject();
-
-        res.status(200).json({ user: safeUser });
-    } catch (error) {
-        res.status(500).json({ error: "Server error: " + error.message });
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
+
+    // Remove sensitive data
+    const { password, ...safeUser } = user.toObject();
+
+    res.status(200).json({ user: safeUser });
+  } catch (error) {
+    res.status(500).json({ error: "Server error: " + error.message });
+  }
 };
 
 export const getCurrentUser = async (req, res) => {
