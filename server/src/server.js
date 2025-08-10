@@ -16,8 +16,6 @@ const app = express();
 // Trust proxy BEFORE cookies or sessions
 app.set("trust proxy", 1);
 
-import cors from "cors";
-
 const allowedOrigins = ["https://scanhire.vercel.app"];
 
 app.use(cors({
