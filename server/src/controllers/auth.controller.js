@@ -16,11 +16,13 @@ export const signUp = async (req, res) => {
 
     const token = await saveUser.getJWT();
 
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // secure only in prod
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000), // 8 hours
+      expires: new Date(Date.now() + 8 * 3600000),
+      path: "/"
     });
 
     return res.status(201).json({
@@ -61,13 +63,15 @@ export const login = async (req, res) => {
 
     const token = await user.getJWT();
 
-    const isProd = process.env.NODE_ENV === "production";
 
+
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("token", token, {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000)
+      expires: new Date(Date.now() + 8 * 3600000),
+      path: "/" // Add this
     });
 
 
@@ -89,8 +93,16 @@ export const login = async (req, res) => {
 
 
 export const logout = async (req, res) => {
-  res.cookie("token", null, { expires: new Date(Date.now()) });
-  res.send("Logged Out Successfully")
+  const isProd = process.env.NODE_ENV === "production";
+
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    expires: new Date(0), // Immediately expire
+    path: "/" // Add this
+  });
+  res.status(200).json({ message: "Logged Out Successfully" });
 }
 
 
