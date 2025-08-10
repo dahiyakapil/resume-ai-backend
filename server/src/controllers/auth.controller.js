@@ -16,15 +16,12 @@ export const signUp = async (req, res) => {
 
     const token = await saveUser.getJWT();
 
-    const isProd = process.env.NODE_ENV === "production";
-
     res.cookie("token", token, {
       httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000)
+      secure: process.env.NODE_ENV === "production", // secure only in prod
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      expires: new Date(Date.now() + 8 * 3600000), // 8 hours
     });
-
 
     return res.status(201).json({
       message: "User created successfully",
@@ -64,12 +61,15 @@ export const login = async (req, res) => {
 
     const token = await user.getJWT();
 
+    const isProd = process.env.NODE_ENV === "production";
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      expires: new Date(Date.now() + 8 * 3600000),
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      expires: new Date(Date.now() + 8 * 3600000)
     });
+
 
     return res.json({
       message: "Logged in Successfully",
