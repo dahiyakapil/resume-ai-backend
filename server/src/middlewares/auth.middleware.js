@@ -12,8 +12,7 @@ export const userAuth = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ Match property name with how you signed the token
-    const user = await User.findById(decodedData.id); 
+    const user = await User.findById(decodedData.id).select("-password");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }

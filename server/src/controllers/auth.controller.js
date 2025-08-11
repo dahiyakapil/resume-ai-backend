@@ -1,6 +1,5 @@
 import User from "../models/user.model.js";
 import { validateSignupData } from "../utils/validation.js";
-import bcrypt from "bcrypt";
 import validator from "validator";
 
 export const signUp = async (req, res) => {
@@ -9,25 +8,26 @@ export const signUp = async (req, res) => {
 
     const { firstName, lastName, email, password } = req.body;
 
+    // Create and save new user (password gets hashed in pre-save hook)
     const user = new User({ firstName, lastName, email, password });
-    const saveUser = await user.save();
+    const savedUser = await user.save();
 
-    const token = await saveUser.getJWT();
+    // Generate token
+    const token = savedUser.getJWT();
 
-    return res.status(201).json({
+    res.status(201).json({
       message: "User created successfully",
-      token, 
+      token,
       user: {
-        id: saveUser._id,
-        firstName: saveUser.firstName,
-        lastName: saveUser.lastName,
-        email: saveUser.email,
-        avatar: saveUser.avatar
-      }
+        id: savedUser._id,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        email: savedUser.email,
+        avatar: savedUser.avatar,
+      },
     });
-
   } catch (error) {
-    return res.status(400).json({ error: "Error creating user: " + error.message });
+    res.status(400).json({ error: error.message });
   }
 };
 
@@ -49,41 +49,28 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid Credentials" });
     }
 
-    const token = await user.getJWT();
+    const token = user.getJWT();
 
-    return res.json({
+    res.json({
       message: "Logged in Successfully",
-      token, // <-- send token in response
+      token,
       user: {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        avatar: user.avatar
-      }
+        avatar: user.avatar,
+      },
     });
-
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
-
-export const logout = async (req, res) => {
-  const isProd = process.env.NODE_ENV === "production";
-
-  res.cookie("token", "", {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
-    expires: new Date(0), // Immediately expire
-    path: "/" // Add this
-  });
-  res.status(200).json({ message: "Logged Out Successfully" });
-}
-
-
-
+export const logout = (req, res) => {
+  // For pure JWT, logout is handled on client by deleting token
+  res.json({ message: "Logged Out Successfully (client should remove token)" });
+};
 
 export const getCurrentUser = async (req, res) => {
   try {
@@ -95,13 +82,10 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
-
 export const updateProfile = async (req, res) => {
   const { firstName, lastName, email } = req.body;
-
   try {
     const user = await User.findById(req.user.id);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.firstName = firstName || user.firstName;
@@ -124,21 +108,18 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-
 export const updatePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-
   try {
     const user = await User.findById(req.user.id);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch)
+    const isMatch = await user.validatePassword(currentPassword);
+    if (!isMatch) {
       return res.status(400).json({ message: "Current password is incorrect" });
+    }
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    user.password = newPassword; // gets hashed in pre-save
     await user.save();
 
     res.json({ message: "Password updated successfully" });
@@ -150,7 +131,6 @@ export const updatePassword = async (req, res) => {
 export const updateAvatar = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.avatar = req.body.style || "micah";
@@ -163,7 +143,7 @@ export const updateAvatar = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        avatar: user.avatar, // ✅ return updated avatar
+        avatar: user.avatar,
       },
     });
   } catch (err) {
