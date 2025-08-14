@@ -272,8 +272,8 @@ export const verifyOtp = async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: "🎉 Welcome to ScanHire AI – AI Resume Analyzer",
-        text: `Hi ${user.firstName}, welcome to ScanHire AI! We're excited to have you onboard.`,
+        subject: "🎉 Welcome to Resumind AI – AI Resume Analyzer",
+        text: `Hi ${user.firstName}, welcome to Resumind AI! We're excited to have you onboard.`,
         html: `
           <div style="font-family: 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px;">
             <div style="
@@ -289,15 +289,15 @@ export const verifyOtp = async (req, res) => {
               -webkit-backdrop-filter: blur(10px);
             ">
               <h2 style="color: #38bdf8; text-align: center; font-size: 22px; margin-bottom: 15px;">
-                🚀 Welcome to ScanHire AI!
+                🚀 Welcome to Resumind AI!
               </h2>
               <p style="color: #e2e8f0; font-size: 15px; text-align: center;">
                 Hi <strong>${user.firstName}</strong>,<br/>
-                Thank you for joining <strong>ScanHire AI – AI Resume Analyzer</strong>.  
+                Thank you for joining <strong>Resumind AI – AI Resume Analyzer</strong>.  
                 You're now part of a community that’s transforming the way resumes are analyzed.
               </p>
               <div style="text-align: center; margin: 25px 0;">
-                <a href="https://scanhire.vercel.app" style="
+                <a href="https://resumindai-ashy.vercel.app/" style="
                   display: inline-block;
                   padding: 12px 20px;
                   background: linear-gradient(135deg, #38bdf8, #2563eb);
@@ -315,11 +315,11 @@ export const verifyOtp = async (req, res) => {
                 We can’t wait to see what you achieve!
               </p>
               <p style="color: #94a3b8; font-size: 13px; text-align: center; margin-top: 20px;">
-                Cheers,<br><strong>ScanHire AI Team</strong>
+                Cheers,<br><strong>Resumind AI Team</strong>
               </p>
             </div>
             <p style="color: #cbd5e1; font-size: 12px; text-align: center; margin-top: 15px; opacity: 0.8;">
-              © ${new Date().getFullYear()} ScanHire AI. All rights reserved.
+              © ${new Date().getFullYear()} Resumind AI. All rights reserved.
             </p>
           </div>
         `,
