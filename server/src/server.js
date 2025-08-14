@@ -16,10 +16,11 @@ const app = express();
 // Trust proxy BEFORE cookies or sessions
 app.set("trust proxy", 1);
 
-const allowedOrigins = ["https://scanhire.vercel.app", "http://localhost:5173"];
+// const allowedOrigins = ["https://resumindai-one.vercel.app/", "http://localhost:5173"];
+const allowedOrigins = ["https://resumindai-one.vercel.app/"];
 
 app.use(cors({
-  origin: allowedOrigins[1], 
+  origin: allowedOrigins[0], 
 }));
 
 
