@@ -10,52 +10,9 @@ import PDFDocument from "pdfkit";
 import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionWithOpenRouter.js";
 
 
-// ✅ Analyze Resume - POST /resume/analyze
 // export const analyzeResume = async (req, res) => {
 //   const filePath = req.file?.path;
-//   const resumeName = req.file?.originalname || "resume.pdf"; // ✅ Extract file name
-
-//   try {
-//     if (!filePath) return res.status(400).json({ error: "No file uploaded" });
-
-//     const extractedText = await extractPdfText(filePath);
-//     if (!extractedText || extractedText.trim().length < 20) {
-//       return res.status(422).json({ error: "Text extraction failed or resume is too short" });
-//     }
-
-//     const resumeUrl = await uploadToCloudinary(filePath);
-//     const aiReport = await analyzeWithOpenRouter(extractedText);
-
-//     const savedReport = await ResumeReport.create({
-//       user: req.user._id,
-//       fileUrl: resumeUrl,
-//       aiFeedback: JSON.stringify(aiReport),
-//       score: aiReport.ats_score || 0,
-//       resumeName, // ✅ Save filename
-//     });
-
-//     return res.status(200).json({
-//       message: "Resume analyzed and saved successfully",
-//       resumeUrl,
-//       analysis: aiReport,
-//       reportId: savedReport._id,
-//       createdAt: savedReport.createdAt,
-//       resumeName, // ✅ Return filename
-//     });
-
-//   } catch (err) {
-//     return res.status(500).json({ error: "Resume analysis failed: " + err.message });
-//   } finally {
-//     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-//   }
-// };
-
-
-
-// ✅ Analyze Resume - POST /resume/analyze
-// export const analyzeResume = async (req, res) => {
-//   const filePath = req.file?.path;
-//   const resumeName = req.file?.originalname || "resume.pdf"; // ✅ Extract file name
+//   const resumeName = req.file?.originalname || "resume.pdf";
 
 //   try {
 //     if (!filePath) return res.status(400).json({ error: "No file uploaded" });
@@ -68,7 +25,6 @@ import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionW
 //     const resumeUrl = await uploadToCloudinary(filePath);
 //     const aiReportRaw = await analyzeWithOpenRouter(extractedText);
 
-//     // ✅ Limit buzzwords to top 10 and exclude ATS sections
 //     const atsKeywords = [
 //       "summary", "experience", "project", "skill", "education", "certification", "award", "honor"
 //     ];
@@ -80,27 +36,83 @@ import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionW
 
 //     const aiReport = {
 //       ...aiReportRaw,
-//       buzzwords
+//       buzzwords,
 //     };
+
+//     // ✨ Rewrite suggestions (only from project section)
+//     const lines = extractedText
+//       .split("\n")
+//       .map((l) => l.trim())
+//       .filter(Boolean);
+
+//     const projectSectionStart = lines.findIndex((line) =>
+//       /projects?/i.test(line)
+//     );
+//     const projectSectionEnd = lines.findIndex(
+//       (line, i) => i > projectSectionStart && /^(skills?|education|experience|certifications?|awards?)/i.test(line)
+//     );
+
+//     const projectLines = lines.slice(
+//       projectSectionStart + 1,
+//       projectSectionEnd > -1 ? projectSectionEnd : lines.length
+//     );
+
+//     const bulletPointsOnly = projectLines.filter((line) => {
+//       const trimmed = line.trim();
+//       const looksLikeBullet =
+//         /^[\u2022\-•*]/.test(trimmed) || /^[A-Z].+\.$/.test(trimmed) || trimmed.length > 30;
+
+//       const lower = trimmed.toLowerCase();
+//       const skipPatterns = [
+//         /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
+//         /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
+//       ];
+
+//       return looksLikeBullet && !skipPatterns.some((p) => p.test(lower));
+//     });
+
+
+
+//     const rewrites = await Promise.all(
+//       bulletPointsOnly
+//         .filter((line) => {
+//           const lower = line.toLowerCase();
+//           const skipPatterns = [
+//             /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
+//             /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
+//           ];
+
+//           return (
+//             line.length > 10 &&
+//             !skipPatterns.some((p) => p.test(lower))
+//           );
+//         })
+//         .map(async (line) => ({
+//           original: line,
+//           rewritten: await rewriteAISuggestionWithOpenRouter(line),
+//         }))
+//     );
 
 //     const savedReport = await ResumeReport.create({
 //       user: req.user._id,
 //       fileUrl: resumeUrl,
 //       aiFeedback: JSON.stringify(aiReport),
 //       score: aiReport.ats_score || 0,
-//       resumeName, // ✅ Save filename
+//       resumeName,
+//       rewrites,
 //     });
 
 //     return res.status(200).json({
 //       message: "Resume analyzed and saved successfully",
 //       resumeUrl,
 //       analysis: aiReport,
+//       rewrites,
 //       reportId: savedReport._id,
 //       createdAt: savedReport.createdAt,
-//       resumeName, // ✅ Return filename
+//       resumeName,
 //     });
-
 //   } catch (err) {
+//     console.error("❌ Resume analysis failed:", err);
 //     return res.status(500).json({ error: "Resume analysis failed: " + err.message });
 //   } finally {
 //     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -109,111 +121,94 @@ import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionW
 
 
 
-// ✅ Analyze Resume + Rewrite Bullet Points - POST /resume/analyze
-// ✅ Analyze Resume - POST /resume/analyze
-
-
-
-
-// ***********************************************
-
 export const analyzeResume = async (req, res) => {
   const filePath = req.file?.path;
   const resumeName = req.file?.originalname || "resume.pdf";
 
-  try {
-    if (!filePath) return res.status(400).json({ error: "No file uploaded" });
+  if (!filePath) return res.status(400).json({ error: "No file uploaded" });
 
+  try {
+    // Step 1: Extract text
     const extractedText = await extractPdfText(filePath);
     if (!extractedText || extractedText.trim().length < 20) {
-      return res.status(422).json({ error: "Text extraction failed or resume is too short" });
+      return res.status(422).json({ error: "Text extraction failed or resume too short" });
     }
 
-    const resumeUrl = await uploadToCloudinary(filePath);
-    const aiReportRaw = await analyzeWithOpenRouter(extractedText);
+    // Step 2: Start Cloudinary upload in parallel
+    const uploadPromise = uploadToCloudinary(filePath);
 
-    const atsKeywords = [
-      "summary", "experience", "project", "skill", "education", "certification", "award", "honor"
-    ];
+    // Step 3: AI analysis
+    const aiAnalysisPromise = analyzeWithOpenRouter(extractedText);
 
-    const buzzwords = (aiReportRaw.buzzwords || []).filter(
-      (word, index) =>
-        index < 15 && !atsKeywords.some((keyword) => word.toLowerCase().includes(keyword))
-    ).slice(0, 10);
-
-    const aiReport = {
-      ...aiReportRaw,
-      buzzwords,
-    };
-
-    // ✨ Rewrite suggestions (only from project section)
-    const lines = extractedText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    const projectSectionStart = lines.findIndex((line) =>
-      /projects?/i.test(line)
+    // Step 4: Extract project bullet points for rewrite
+    const lines = extractedText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const projectStart = lines.findIndex((line) => /projects?/i.test(line));
+    const projectEnd = lines.findIndex(
+      (line, i) => i > projectStart && /^(skills?|education|experience|certifications?|awards?)/i.test(line)
     );
-    const projectSectionEnd = lines.findIndex(
-      (line, i) => i > projectSectionStart && /^(skills?|education|experience|certifications?|awards?)/i.test(line)
-    );
+    const projectLines = lines.slice(projectStart + 1, projectEnd > -1 ? projectEnd : lines.length);
 
-    const projectLines = lines.slice(
-      projectSectionStart + 1,
-      projectSectionEnd > -1 ? projectSectionEnd : lines.length
-    );
-
-    const bulletPointsOnly = projectLines.filter((line) => {
+    const bulletPoints = projectLines.filter((line) => {
       const trimmed = line.trim();
-      const looksLikeBullet =
-        /^[\u2022\-•*]/.test(trimmed) || /^[A-Z].+\.$/.test(trimmed) || trimmed.length > 30;
-
-      const lower = trimmed.toLowerCase();
+      const looksLikeBullet = /^[\u2022\-•*]/.test(trimmed) || /^[A-Z].+\.$/.test(trimmed) || trimmed.length > 30;
       const skipPatterns = [
         /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
         /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
       ];
-
-      return looksLikeBullet && !skipPatterns.some((p) => p.test(lower));
+      return looksLikeBullet && !skipPatterns.some((p) => p.test(trimmed.toLowerCase()));
     });
 
-
-
-    const rewrites = await Promise.all(
-      bulletPointsOnly
-        .filter((line) => {
-          const lower = line.toLowerCase();
-          const skipPatterns = [
-            /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
-            /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
-          ];
-
-          return (
-            line.length > 10 &&
-            !skipPatterns.some((p) => p.test(lower))
-          );
+    // Step 5: Batch rewrite bullet points in a single call if possible
+    // Step 5: Rewrite bullet points individually
+    const rewrites = bulletPoints.length
+      ? await Promise.all(
+        bulletPoints.map(async (bp) => {
+          try {
+            const rewritten = await rewriteAISuggestionWithOpenRouter(bp);
+            // Avoid bad rewrites like single letters or empty strings
+            if (!rewritten || rewritten.length < 10) {
+              return bp;
+            }
+            return rewritten;
+          } catch (e) {
+            console.error(`⚠️ Rewrite failed for: "${bp}"`, e.message);
+            return bp;
+          }
         })
-        .map(async (line) => ({
-          original: line,
-          rewritten: await rewriteAISuggestionWithOpenRouter(line),
-        }))
-    );
+      )
+      : [];
 
+
+    // Step 6: Wait for AI analysis & upload to finish
+    const aiReportRaw = await aiAnalysisPromise;
+    const resumeUrl = await uploadPromise;
+
+    // Step 7: Filter buzzwords
+    const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
+    const buzzwords = (aiReportRaw.buzzwords || [])
+      .filter((w, i) => i < 15 && !atsKeywords.some((k) => w.toLowerCase().includes(k)))
+      .slice(0, 10);
+
+    const aiReport = { ...aiReportRaw, buzzwords };
+
+    // Step 8: Save report
     const savedReport = await ResumeReport.create({
       user: req.user._id,
       fileUrl: resumeUrl,
       aiFeedback: JSON.stringify(aiReport),
       score: aiReport.ats_score || 0,
       resumeName,
-      rewrites,
+      rewrites: bulletPoints.map((line, idx) => ({
+        original: line,
+        rewritten: rewrites[idx] || line
+      })),
     });
 
     return res.status(200).json({
       message: "Resume analyzed and saved successfully",
       resumeUrl,
       analysis: aiReport,
-      rewrites,
+      rewrites: savedReport.rewrites,
       reportId: savedReport._id,
       createdAt: savedReport.createdAt,
       resumeName,
@@ -225,6 +220,112 @@ export const analyzeResume = async (req, res) => {
     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 };
+
+
+
+
+
+export const aiSuggestionAnalyzeResume = async (req, res) => {
+  const filePath = req.file?.path;
+  const resumeName = req.file?.originalname || "resume.pdf";
+
+  if (!filePath) return res.status(400).json({ error: "No file uploaded" });
+
+  try {
+    // Step 1: Extract text
+    const extractedText = await extractPdfText(filePath);
+    if (!extractedText || extractedText.trim().length < 20) {
+      return res.status(422).json({ error: "Text extraction failed or resume too short" });
+    }
+
+    // Step 2: Start Cloudinary upload in parallel
+    const uploadPromise = uploadToCloudinary(filePath);
+
+    // Step 3: AI analysis
+    const aiAnalysisPromise = analyzeWithOpenRouter(extractedText);
+
+    // Step 4: Extract project bullet points for rewrite
+    const lines = extractedText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const projectStart = lines.findIndex((line) => /projects?/i.test(line));
+    const projectEnd = lines.findIndex(
+      (line, i) => i > projectStart && /^(skills?|education|experience|certifications?|awards?)/i.test(line)
+    );
+    const projectLines = lines.slice(projectStart + 1, projectEnd > -1 ? projectEnd : lines.length);
+
+    const bulletPoints = projectLines.filter((line) => {
+      const trimmed = line.trim();
+      const looksLikeBullet = /^[\u2022\-•*]/.test(trimmed) || /^[A-Z].+\.$/.test(trimmed) || trimmed.length > 30;
+      const skipPatterns = [
+        /\b(india|panipat|haryana|email|phone|contact|linkedin|github|\d{10})\b/,
+        /\bskills?\b/, /\bcss\b/, /\bhtml\b/, /\bjavascript\b/, /\breact\b/, /\bnode\b/
+      ];
+      return looksLikeBullet && !skipPatterns.some((p) => p.test(trimmed.toLowerCase()));
+    });
+
+    // Step 5: Batch rewrite bullet points in a single call if possible
+    // Step 5: Rewrite bullet points individually
+    const rewrites = bulletPoints.length
+      ? await Promise.all(
+        bulletPoints.map(async (bp) => {
+          try {
+            const rewritten = await rewriteAISuggestionWithOpenRouter(bp);
+            // Avoid bad rewrites like single letters or empty strings
+            if (!rewritten || rewritten.length < 10) {
+              return bp;
+            }
+            return rewritten;
+          } catch (e) {
+            console.error(`⚠️ Rewrite failed for: "${bp}"`, e.message);
+            return bp;
+          }
+        })
+      )
+      : [];
+
+
+    // Step 6: Wait for AI analysis & upload to finish
+    const aiReportRaw = await aiAnalysisPromise;
+    const resumeUrl = await uploadPromise;
+
+    // Step 7: Filter buzzwords
+    const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
+    const buzzwords = (aiReportRaw.buzzwords || [])
+      .filter((w, i) => i < 15 && !atsKeywords.some((k) => w.toLowerCase().includes(k)))
+      .slice(0, 10);
+
+    const aiReport = { ...aiReportRaw, buzzwords };
+
+    // Step 8: Save report
+    const savedReport = await ResumeReport.create({
+      user: req.user._id,
+      fileUrl: resumeUrl,
+      aiFeedback: JSON.stringify(aiReport),
+      score: aiReport.ats_score || 0,
+      resumeName,
+      rewrites: bulletPoints.map((line, idx) => ({
+        original: line,
+        rewritten: rewrites[idx] || line
+      })),
+    });
+
+    return res.status(200).json({
+      message: "Resume analyzed and saved successfully",
+      resumeUrl,
+      analysis: aiReport,
+      rewrites: savedReport.rewrites,
+      reportId: savedReport._id,
+      createdAt: savedReport.createdAt,
+      resumeName,
+    });
+  } catch (err) {
+    console.error("❌ Resume analysis failed:", err);
+    return res.status(500).json({ error: "Resume analysis failed: " + err.message });
+  } finally {
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+};
+
+
 
 
 
@@ -278,81 +379,6 @@ export const deleteResumeReport = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // ✅ Reanalyze Existing Resume - PUT /resume/reanalyze/:reportId
-// export const reanalyzeResume = async (req, res) => {
-//   const { reportId } = req.params;
-
-//   try {
-//     const report = await ResumeReport.findOne({ _id: reportId, user: req.user._id });
-//     if (!report) {
-//       return res.status(404).json({ error: "Report not found" });
-//     }
-
-//     // 🟡 Step 1: Download file from Cloudinary
-//     const tmpFile = await tmp.file({ postfix: ".pdf" });
-//     const response = await axios.get(report.fileUrl, { responseType: "stream" });
-
-//     await new Promise((resolve, reject) => {
-//       const writeStream = fs.createWriteStream(tmpFile.path);
-//       response.data.pipe(writeStream);
-//       writeStream.on("finish", resolve);
-//       writeStream.on("error", reject);
-//     });
-
-//     // 🟢 Step 2: Extract and Reanalyze
-//     const extractedText = await extractPdfText(tmpFile.path);
-//     if (!extractedText || extractedText.trim().length < 20) {
-//       return res.status(422).json({ error: "Text extraction failed or resume is too short" });
-//     }
-
-//     const aiReport = await analyzeWithOpenRouter(extractedText);
-//     if (!aiReport || typeof aiReport !== "object") {
-//       return res.status(500).json({ error: "AI analysis failed" });
-//     }
-
-//     // 🟢 Step 3: Save updated report
-//     report.aiFeedback = JSON.stringify(aiReport);
-//     report.score = aiReport.ats_score || 0;
-//     report.createdAt = new Date();
-//     await report.save();
-
-//     return res.status(200).json({
-//       message: "Resume re-analyzed successfully",
-//       resumeUrl: report.fileUrl,
-//       resumeName: report.resumeName || "Resume.pdf", // ✅ Return name
-//       analysis: aiReport,
-//       reportId: report._id,
-//       createdAt: report.createdAt,
-//     });
-//   } catch (err) {
-//     return res.status(500).json({
-//       error: "Failed to re-analyze resume: " + err.message,
-//     });
-//   } finally {
-//     if (tmpFile?.cleanup) tmpFile.cleanup();
-//   }
-// };
-
-
-
-
 
 
 // ✅ Reanalyze Existing Resume - PUT /resume/reanalyze/:reportId

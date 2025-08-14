@@ -64,7 +64,7 @@ ${truncatedResumeText}
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "HTTP-Referer": "https://yourdomain.com",
-          "X-Title": "ScanHire Resume Analyzer",
+          "X-Title": " Resumind AI Resume Analyzer",
         },
       }
     );

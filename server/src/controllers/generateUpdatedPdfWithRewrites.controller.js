@@ -10,28 +10,6 @@ import fs from "fs/promises";
 import Handlebars from "handlebars";
 import { fileURLToPath } from "url";
 
-
-
-
-
-
-
-
-
-
-// 🧠 Helper to get updated content with rewrites applied
-
-
-
-
-
-
-
-
-
-
-
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -71,28 +49,6 @@ export const generateUpdatedPdfWithRewrites = async (req, res) => {
     res.status(500).json({ error: "Failed to generate updated PDF" });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ✅ Helper to extract text again
 async function extractPdfTextFromCloud(fileUrl) {

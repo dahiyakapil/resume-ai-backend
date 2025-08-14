@@ -1,23 +1,8 @@
-// import express from "express";
-// import upload from "../middlewares/upload.js";
-// import { analyzeResume, getResumeReports } from "../controllers/resume.controller.js";
-// import { userAuth } from "../middlewares/auth.middleware.js";
-
-
-// const resumeReportRouter = express.Router();
-// resumeReportRouter.post("/analyze", userAuth, upload.single("resume"), analyzeResume);
-
-// resumeReportRouter.get("/history", userAuth, getResumeReports);
-
-
-// export default resumeReportRouter;
-
-
-
 
 import express from "express";
 import { upload } from "../middlewares/upload.js";
 import {
+    aiSuggestionAnalyzeResume,
     analyzeResume,
     deleteResumeReport,
     downloadResumeReportPdf,
@@ -38,6 +23,9 @@ const resumeRouter = express.Router();
 // @desc    Upload and analyze resume (PDF)
 // @access  Private
 resumeRouter.post("/analyze", userAuth, upload.single("resume"), analyzeResume);
+
+
+resumeRouter.post("/ai-suggestion", userAuth, upload.single("resume"), aiSuggestionAnalyzeResume);
 
 // @route   GET /api/resume/history
 // @desc    Get resume analysis history
@@ -61,6 +49,8 @@ resumeRouter.get("/:reportId", userAuth, getResumeReportById);
 // @desc    Download resume analysis report as PDF
 // @access  Private
 resumeRouter.get("/download/:reportId", userAuth, downloadResumeReportPdf);
+
+
 
 
 // POST /rewrite-suggestions

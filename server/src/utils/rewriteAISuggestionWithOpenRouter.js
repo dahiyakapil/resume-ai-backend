@@ -1,4 +1,4 @@
-// utils/rewriteWithOpenRouter.js
+
 import axios from "axios";
 
 
@@ -21,6 +21,7 @@ Rewritten:
 
 
     try {
+      console.log(process.env.OPENROUTER_API_KEY)
         const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
@@ -34,7 +35,7 @@ Rewritten:
                 headers: {
                     Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     "HTTP-Referer": "https://yourdomain.com",
-                    "X-Title": "ScanHire Rewrite Tool",
+                    "X-Title": " Resumind AI Rewrite Tool",
                 },
             }
         );
@@ -53,12 +54,9 @@ Rewritten:
         }
 
         return result;
-
-
-
-        return result;
     } catch (err) {
         console.error("⚠️ AI Rewrite Error:", err.message);
         throw new Error("Failed to rewrite bullet point.");
     }
 };
+

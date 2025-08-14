@@ -16,10 +16,10 @@ const app = express();
 // Trust proxy BEFORE cookies or sessions
 app.set("trust proxy", 1);
 
-const allowedOrigins = ["https://scanhire.vercel.app"];
+const allowedOrigins = ["https://scanhire.vercel.app", "http://localhost:5173"];
 
 app.use(cors({
-  origin: allowedOrigins[0], // allow your frontend domain
+  origin: allowedOrigins[1], 
 }));
 
 
@@ -38,7 +38,7 @@ app.get("/", (req, res) => {
 
 // Health check
 app.use("/healthcheck", (req, res) => {
-  res.send("ScanHire AI Platform Backend is running....");
+  res.send(" Resumind AI Platform Backend is running....");
 });
 
 // Routes
