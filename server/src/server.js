@@ -17,7 +17,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 // const allowedOrigins = ["https://resumindai-one.vercel.app/", "http://localhost:5173"];
-const allowedOrigins = ["https://resumindai-one.vercel.app"];
+const allowedOrigins = ["https://resumind-ai-eight.vercel.app"];
 
 app.use(cors({
   origin: allowedOrigins[0], 
