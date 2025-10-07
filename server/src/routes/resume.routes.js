@@ -1,4 +1,3 @@
-
 import express from "express";
 import { upload } from "../middlewares/upload.js";
 import {
@@ -19,44 +18,32 @@ import { generateUpdatedPdfWithRewrites } from "../controllers/generateUpdatedPd
 
 const resumeRouter = express.Router();
 
-// @route   POST /api/resume/analyze
-// @desc    Upload and analyze resume (PDF)
-// @access  Private
+// POST /api/resume/analyze
 resumeRouter.post("/analyze", userAuth, upload.single("resume"), analyzeResume);
 
 
 resumeRouter.post("/ai-suggestion", userAuth, upload.single("resume"), aiSuggestionAnalyzeResume);
 
-// @route   GET /api/resume/history
-// @desc    Get resume analysis history
-// @access  Private
+// GET /api/resume/history
 resumeRouter.get("/history", userAuth, getResumeReports);
 
 
-// @route   DELETE /resume/:reportId
+// DELETE /resume/:reportId
 resumeRouter.delete("/:reportId", userAuth, deleteResumeReport);
 
 resumeRouter.put("/reanalyze/:reportId", userAuth, reanalyzeResume);
 
 
-// @route   GET /api/resume/:reportId
-// @desc    Get a single resume report
-// @access  Private
+// GET /api/resume/:reportId
 resumeRouter.get("/:reportId", userAuth, getResumeReportById);
 
 
-// @route   GET /api/resume/download/:reportId
-// @desc    Download resume analysis report as PDF
-// @access  Private
+// GET /api/resume/download/:reportId
 resumeRouter.get("/download/:reportId", userAuth, downloadResumeReportPdf);
-
-
 
 
 // POST /rewrite-suggestions
 resumeRouter.post("/rewrite/:reportId", userAuth, rewriteAISuggestion);
-
-
 
 
 // POST /resume/download-updated/:reportId

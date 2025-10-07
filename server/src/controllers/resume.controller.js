@@ -515,6 +515,8 @@ export const getResumeReportById = async (req, res) => {
 
 
 
+
+
 // Utility: Sanitize plain text
 function sanitizeText(text) {
   return String(text)
@@ -636,3 +638,121 @@ export const rewriteAISuggestion = async (req, res) => {
     return res.status(500).json({ error: "AI rewrite failed" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+export const getReports = async (req, res) => {
+  try {
+    const reports = await ResumeReport.find({ })
+      .sort({ createdAt: -1 })
+      .populate("user", "firstName lastName email avatar role"); // ✅ populate user details
+
+    const parsedReports = reports.map((report) => ({
+      reportId: report._id.toString(),
+      resumeUrl: report.fileUrl,
+      resumeName: report.resumeName || "Resume.pdf",
+      analysis:
+        typeof report.aiFeedback === "string"
+          ? JSON.parse(report.aiFeedback)
+          : report.aiFeedback,
+      score: report.score,
+      createdAt: report.createdAt,
+      user: report.user, // ✅ include populated user object
+    }));
+
+    return res.status(200).json({
+      success: true,
+      reports: parsedReports,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch resume reports: " + err.message,
+    });
+  }
+};
+
+
+
+
+
+
+
+
+export const getReportById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const report = await ResumeReport.findById(id)
+      .populate("user", "firstName lastName email avatar role");
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        error: "Report not found",
+      });
+    }
+
+    const parsedReport = {
+      reportId: report._id.toString(),
+      resumeUrl: report.fileUrl,
+      resumeName: report.resumeName || "Resume.pdf",
+      analysis:
+        typeof report.aiFeedback === "string"
+          ? JSON.parse(report.aiFeedback)
+          : report.aiFeedback,
+      score: report.score,
+      createdAt: report.createdAt,
+      rewrites: report.rewrites || [],
+      user: report.user, // ✅ populated user
+    };
+
+    return res.status(200).json({
+      success: true,
+      report: parsedReport,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch resume report: " + err.message,
+    });
+  }
+};
+
+
+export const deleteReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const report = await ResumeReport.findById(id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        error: "Report not found",
+      });
+    }
+
+    await report.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Report deleted successfully",
+      deletedReportId: id,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete report: " + err.message,
+    });
+  }
+};
+
+

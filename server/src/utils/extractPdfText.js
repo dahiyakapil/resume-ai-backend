@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import pdf from "pdf-parse/lib/pdf-parse.js"; // ✅ Direct import of parser function
+import pdf from "pdf-parse/lib/pdf-parse.js";
 import { fromPath } from "pdf2pic";
 import { createWorker } from "tesseract.js";
 
@@ -13,7 +13,7 @@ export const extractPdfText = async (filePath) => {
       throw new Error(`PDF file not found: ${filePath}`);
     }
 
-    // 1️⃣ Try pdf-parse first
+    // pdf-parse first
     const buffer = fs.readFileSync(filePath);
     const data = await pdf(buffer);
     if (data.text && data.text.trim().length > 30) {
@@ -22,7 +22,7 @@ export const extractPdfText = async (filePath) => {
 
     console.warn("⚠ pdf-parse result too short — falling back to OCR...");
 
-    // 2️⃣ OCR fallback using pdf2pic + tesseract.js
+    // OCR fallback using pdf2pic + tesseract.js
     const convert = fromPath(filePath, {
       density: 300,
       saveFilename: "resume-page",

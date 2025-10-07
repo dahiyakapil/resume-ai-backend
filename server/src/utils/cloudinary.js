@@ -11,10 +11,7 @@ cloudinary.v2.config({
   api_secret: process.env.CLOUDINARY_SECRET,
 });
 
-/**
- * Upload a file to Cloudinary and return the secure URL.
- * Deletes the local file after upload (whether success or fail).
- */
+
 export const uploadToCloudinary = async (filePath) => {
   try {
     const result = await cloudinary.v2.uploader.upload(filePath, {
@@ -32,7 +29,7 @@ export const uploadToCloudinary = async (filePath) => {
     throw new Error("Cloudinary upload failed: " + (error.message || JSON.stringify(error)));
   }
   finally {
-    // ✅ Always clean up the local file
+    // Always clean up the local file
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

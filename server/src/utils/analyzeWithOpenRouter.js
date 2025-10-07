@@ -1,12 +1,8 @@
-
-
-
-
 import axios from "axios";
 
-// ✅ Analyze resume with OpenRouter + sanitize + fallback
+// Analyze resume with OpenRouter + sanitize + fallback
 export const analyzeWithOpenRouter = async (resumeText) => {
-  const truncatedResumeText = resumeText.slice(0, 8000); // ✂️ Avoid oversized prompt
+  const truncatedResumeText = resumeText.slice(0, 8000);
 
   const prompt = `
 You are a strict and professional ATS resume analyzer trained on Resume Worded, Jobscan, and recruiter screening data.
@@ -53,7 +49,6 @@ ${truncatedResumeText}
     const response = await axios.post(
       apiUrl,
       {
-        
         model: `${process.env.OPENROUTER_MODEL}`,
         messages: [
           { role: "system", content: "You are an expert ATS resume analyzer." },
@@ -69,7 +64,7 @@ ${truncatedResumeText}
       }
     );
     let result = response.data.choices[0].message.content;
-    console.log("🧠 OpenRouter AI Raw Response:", result);
+    console.log(" OpenRouter AI Raw Response:", result);
 
     result = result
       .replace(/```json|```/g, "") // Remove markdown
@@ -113,7 +108,7 @@ ${truncatedResumeText}
   }
 };
 
-// ✅ Fallback missing section checker
+// Fallback missing section checker
 const checkMissingSections = (text) => {
   const lower = text.toLowerCase();
   const missing = [];
@@ -129,7 +124,7 @@ const checkMissingSections = (text) => {
   return missing;
 };
 
-// ✅ Check if a word is an ATS keyword
+// Check if a word is an ATS keyword
 const isATSKeyword = (word) => {
   const atsTerms = [
     "summary", "experience", "project", "education", "skills",

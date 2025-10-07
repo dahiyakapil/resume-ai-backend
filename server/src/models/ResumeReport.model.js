@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const resumeReportSchema = new mongoose.Schema({
@@ -12,7 +11,7 @@ const resumeReportSchema = new mongoose.Schema({
     required: true,
   },
   aiFeedback: {
-    type: mongoose.Schema.Types.Mixed, // ← store as object
+    type: mongoose.Schema.Types.Mixed, 
     required: true,
   },
   score: {

@@ -9,6 +9,7 @@ import resumeRouter from "./routes/resume.routes.js";
 import session from "express-session";
 import morgan from "morgan";
 import jobMatchrouter from "./routes/jobMatch.route.js";
+import adminRouter from "./routes/admin.route.js";
 
 const app = express();
 
@@ -17,7 +18,8 @@ const app = express();
 app.set("trust proxy", 1);
 
 // const allowedOrigins = ["https://resumindai-one.vercel.app/", "http://localhost:5173"];
-const allowedOrigins = ["https://resumindai-ashy.vercel.app"];
+// const allowedOrigins = ["https://resumindai-ashy.vercel.app"];
+const allowedOrigins = ["http://localhost:5173"];
 
 app.use(cors({
   origin: allowedOrigins[0], 
@@ -42,10 +44,14 @@ app.use("/healthcheck", (req, res) => {
   res.send(" Resumind AI Platform Backend is running....");
 });
 
-// Routes
+// AUTH Routes
 app.use("/api/auth", authRouter);
 app.use("/api/resume", resumeRouter);
 app.use("/api/job", jobMatchrouter);
+
+
+// ADMIN ROUTES
+app.use("/api/admin", adminRouter)
 
 dbConnect()
   .then(() => {

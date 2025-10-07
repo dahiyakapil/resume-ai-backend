@@ -1,4 +1,3 @@
-// models/pendingUser.model.js
 import mongoose from "mongoose";
 
 const pendingUserSchema = new mongoose.Schema({
