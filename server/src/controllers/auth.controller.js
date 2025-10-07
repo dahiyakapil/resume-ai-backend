@@ -3,6 +3,10 @@ import User from "../models/user.model.js";
 import OTP from "../models/otp.model.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import validator from "validator";
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 export const signUp = async (req, res) => {
   try {
