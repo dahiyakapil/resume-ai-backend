@@ -7,17 +7,17 @@ export const analyzeWithOpenRouter = async (resumeText) => {
   const prompt = `
 You are a strict and professional ATS resume analyzer trained on Resume Worded, Jobscan, and recruiter screening data.
 
-Your job is to analyze the following resume and return valid JSON with these keys:
+Your job is to analyze the following resume and return ONLY valid JSON with these exact keys:
 
 {
-  "ats_score": number (0–100),
-  "suggestions": [string],
-  "repeated_phrases": [string],
-  "buzzwords": [string],
-  "action_verbs": [string],
-  "missing_sections": [string],
-  "tone_analysis": string,
-  "verdict_summary": string
+  "ats_score": 0,
+  "suggestions": [],
+  "repeated_phrases": [],
+  "buzzwords": [],
+  "action_verbs": [],
+  "missing_sections": [],
+  "tone_analysis": "",
+  "verdict_summary": ""
 }
 
 ### ATS Scoring Rules:
@@ -37,7 +37,7 @@ Only count these as "present" if explicitly labeled in the resume:
 
 Do not assume a section exists unless clearly titled. Return all missing sections.
 
-Return ONLY valid JSON with no comments or markdown.
+CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanations, no comments. Just the JSON object starting with { and ending with }.
 
 Resume Text:
 ${truncatedResumeText}
@@ -64,8 +64,9 @@ ${truncatedResumeText}
       }
     );
     let result = response.data.choices[0].message.content;
-    console.log(" OpenRouter AI Raw Response:", result);
+    console.log("✅ OpenRouter AI Raw Response:", result);
 
+    // More aggressive cleaning
     result = result
       .replace(/```json|```/g, "") // Remove markdown
       .replace(/\\n/g, " ")
@@ -76,14 +77,33 @@ ${truncatedResumeText}
       .replace(/\s{2,}/g, " ")
       .trim();
 
+    // Try to extract JSON if wrapped in text
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      result = jsonMatch[0];
+    }
+
+    console.log("🧹 Cleaned JSON:", result);
 
     let parsed;
     try {
       parsed = JSON.parse(result);
     } catch (e) {
       console.error("❌ JSON parse error:", e.message);
-      console.error("🔍 Raw AI content:", result);
-      return { error: "Invalid JSON from OpenRouter." };
+      console.error("🔍 Cleaned content:", result);
+      
+      // Return a fallback response instead of error
+      return {
+        ats_score: 0,
+        suggestions: ["Unable to parse AI response. Please try again."],
+        repeated_phrases: [],
+        buzzwords: [],
+        action_verbs: [],
+        missing_sections: checkMissingSections(truncatedResumeText),
+        tone_analysis: "Unable to analyze tone.",
+        verdict_summary: "Analysis failed due to parsing error.",
+        error: "Invalid JSON from OpenRouter."
+      };
     }
 
     // Step 3: Merge fallback for missing sections

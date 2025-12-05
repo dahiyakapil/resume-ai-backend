@@ -183,6 +183,15 @@ export const analyzeResume = async (req, res) => {
     const aiReportRaw = await aiAnalysisPromise;
     const resumeUrl = await uploadPromise;
 
+    // Check if AI analysis failed critically
+    if (aiReportRaw.error && !aiReportRaw.ats_score) {
+      return res.status(500).json({
+        error: "AI analysis failed",
+        message: aiReportRaw.error,
+        resumeUrl
+      });
+    }
+
     // Step 7: Filter buzzwords
     const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
     const buzzwords = (aiReportRaw.buzzwords || [])
@@ -286,6 +295,15 @@ export const aiSuggestionAnalyzeResume = async (req, res) => {
     // Step 6: Wait for AI analysis & upload to finish
     const aiReportRaw = await aiAnalysisPromise;
     const resumeUrl = await uploadPromise;
+
+    // Check if AI analysis failed critically
+    if (aiReportRaw.error && !aiReportRaw.ats_score) {
+      return res.status(500).json({
+        error: "AI analysis failed",
+        message: aiReportRaw.error,
+        resumeUrl
+      });
+    }
 
     // Step 7: Filter buzzwords
     const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
