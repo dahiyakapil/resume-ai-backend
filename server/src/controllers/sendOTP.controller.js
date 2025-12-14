@@ -4,30 +4,53 @@ import User from "../models/user.model.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
 const normalizeEmail = (raw) => String(raw || "").trim().toLowerCase();
+
 export const sendOtp = async (req, res) => {
     try {
-        const { firstName, lastName,  email: rawEmail, password } = req.body;
-        const email = normalizeEmail(rawEmail)
+        console.log('[SEND-OTP] Request received:', { email: req.body.email });
+        
+        const { firstName, lastName, email: rawEmail, password } = req.body;
+        const email = normalizeEmail(rawEmail);
 
+        // Validate all required fields
         if (!firstName || !lastName || !email || !password) {
-            return res.status(400).json({ error: "All fields are required" });
+            console.log('[SEND-OTP] Validation failed: Missing required fields');
+            return res.status(400).json({ 
+                error: "All fields are required",
+                details: {
+                    firstName: !firstName ? 'required' : 'ok',
+                    lastName: !lastName ? 'required' : 'ok',
+                    email: !email ? 'required' : 'ok',
+                    password: !password ? 'required' : 'ok'
+                }
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            console.log('[SEND-OTP] Invalid email format:', email);
+            return res.status(400).json({ error: "Invalid email format" });
         }
 
         // Check if already registered
         const existingUser = await User.findOne({ email });
         if (existingUser) {
+            console.log('[SEND-OTP] User already exists:', email);
             return res.status(400).json({ error: "User already exists" });
         }
 
         // Generate OTP & expiry
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+        console.log('[SEND-OTP] Generated OTP for:', email);
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Remove old pending record if exists
         await PendingUser.findOneAndDelete({ email });
+        console.log('[SEND-OTP] Cleaned up old pending user (if any)');
 
         // Save to PendingUser
         await PendingUser.create({
@@ -38,20 +61,24 @@ export const sendOtp = async (req, res) => {
             otp,
             otpExpires,
         });
+        console.log('[SEND-OTP] Pending user created successfully');
 
         // Check if email credentials are configured
         if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.error("Email credentials not configured");
+            console.error('[SEND-OTP] Email credentials not configured');
+            // Clean up pending user since we can't send OTP
+            await PendingUser.findOneAndDelete({ email });
             return res.status(500).json({ 
-                error: "Email service not configured. Please check server settings." 
+                error: "Email service not configured. Please contact support." 
             });
         }
 
         // Send OTP Email
+        console.log('[SEND-OTP] Attempting to send OTP email...');
         try {
             await sendEmail({
                 to: email,
-                subject: "Your  Resumind AI Verification Code",
+                subject: "Your Resumind AI Verification Code",
                 text: `Hello ${firstName}, Your OTP is ${otp} (valid for 5 minutes).`,
                 html: `
                 <div style="font-family: 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 30px;">
@@ -87,21 +114,39 @@ export const sendOtp = async (req, res) => {
                 </div>
                 `,
             });
+            console.log('[SEND-OTP] OTP email sent successfully to:', email);
         } catch (emailError) {
-            console.error("Failed to send OTP email:", emailError);
+            console.error('[SEND-OTP] Failed to send OTP email:', {
+                email,
+                error: emailError.message,
+                stack: emailError.stack
+            });
+            
+            // Clean up pending user since OTP wasn't sent
+            await PendingUser.findOneAndDelete({ email });
+            
             return res.status(500).json({ 
-                error: "Failed to send OTP email. Please try again later." 
+                error: "Failed to send OTP email. Please check your email address and try again.",
+                details: process.env.NODE_ENV === 'development' ? emailError.message : undefined
             });
         }
 
-        // Instead of making the frontend re-enter email, return it here
+        // Return success response
+        console.log('[SEND-OTP] Process completed successfully for:', email);
         res.json({
-            message: "OTP sent to email",
+            message: "OTP sent to email successfully",
             email, // frontend stores this for verify step
         });
 
     } catch (error) {
-        console.error("SendOTP error:", error);
-        res.status(500).json({ error: error.message });
+        console.error('[SEND-OTP] Unexpected error:', {
+            error: error.message,
+            stack: error.stack
+        });
+        
+        res.status(500).json({ 
+            error: "An unexpected error occurred. Please try again.",
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };

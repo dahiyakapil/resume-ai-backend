@@ -228,16 +228,25 @@ const normalizeEmail = (raw) => String(raw || "").trim().toLowerCase();
 
 export const verifyOtp = async (req, res) => {
   try {
+    console.log('[VERIFY-OTP] Request received:', { email: req.body.email });
+    
     const { otp, email: rawEmail } = req.body;
     const email = normalizeEmail(rawEmail);
 
-
     if (!otp || !email) {
+      console.log('[VERIFY-OTP] Validation failed: Missing required fields');
       return res.status(400).json({ error: "OTP and email are required" });
     }
 
     const pendingUser = await PendingUser.findOne({ email });
+    
+    if (!pendingUser) {
+      console.log('[VERIFY-OTP] No pending user found for:', email);
+      return res.status(400).json({ error: "No pending signup found. Please request a new OTP." });
+    }
+    
     if (String(pendingUser.otp) !== String(otp)) {
+      console.log('[VERIFY-OTP] Invalid OTP provided for:', email);
       return res.status(400).json({ error: "Invalid OTP" });
     }
 
@@ -246,18 +255,21 @@ export const verifyOtp = async (req, res) => {
     }
 
     if (pendingUser.otpExpires < new Date()) {
+      console.log('[VERIFY-OTP] OTP expired for:', email);
       await PendingUser.deleteOne({ email });
-      return res.status(400).json({ error: "OTP expired" });
+      return res.status(400).json({ error: "OTP expired. Please request a new one." });
     }
 
     // Check if user already exists (to avoid duplicates)
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('[VERIFY-OTP] User already exists:', email);
       await PendingUser.deleteOne({ email }); // cleanup
-      return res.status(409).json({ error: "User already exists" });
+      return res.status(409).json({ error: "User already exists. Please login." });
     }
 
     // Create new user
+    console.log('[VERIFY-OTP] Creating new user:', email);
     const user = await User.create({
       firstName: pendingUser.firstName,
       lastName: pendingUser.lastName,
@@ -267,8 +279,10 @@ export const verifyOtp = async (req, res) => {
 
     // Remove pending user after creation
     await PendingUser.deleteOne({ email });
+    console.log('[VERIFY-OTP] User created successfully:', email);
 
     // Send welcome email without blocking the response
+    console.log('[VERIFY-OTP] Sending welcome email...');
     try {
       await sendEmail({
         to: user.email,
@@ -324,9 +338,10 @@ export const verifyOtp = async (req, res) => {
           </div>
         `,
       });
+      console.log('[VERIFY-OTP] Welcome email sent successfully');
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
-      // Proceed without failing the response
+      console.error('[VERIFY-OTP] Failed to send welcome email:', emailError.message);
+      // Proceed without failing the response - user is created successfully
     }
 
     // Generate JWT token
@@ -334,10 +349,28 @@ export const verifyOtp = async (req, res) => {
       expiresIn: "7d",
     });
 
+    console.log('[VERIFY-OTP] Process completed successfully for:', email);
+    
     // Return success response with token
-    return res.json({ message: "Signup successful", token });
+    return res.json({ 
+      message: "Signup successful! Welcome to Resumind AI.", 
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email
+      }
+    });
   } catch (error) {
-    console.error("verifyOtp error:", error);
-    return res.status(500).json({ error: error.message || "Server error" });
+    console.error('[VERIFY-OTP] Unexpected error:', {
+      error: error.message,
+      stack: error.stack
+    });
+    
+    return res.status(500).json({ 
+      error: "An unexpected error occurred during verification.",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
