@@ -8,6 +8,7 @@ import { analyzeWithOpenRouter } from "../utils/analyzeWithOpenRouter.js";
 import ResumeReport from "../models/ResumeReport.model.js";
 import PDFDocument from "pdfkit";
 import { rewriteAISuggestionWithOpenRouter } from "../utils/rewriteAISuggestionWithOpenRouter.js";
+import { rewriteBulletPointsSequentially } from "../utils/rewriteSequentially.js";
 
 
 // export const analyzeResume = async (req, res) => {
