@@ -63,9 +63,9 @@ export const sendOtp = async (req, res) => {
         });
         console.log('[SEND-OTP] Pending user created successfully');
 
-        // Check if email credentials are configured
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.error('[SEND-OTP] Email credentials not configured');
+        // Check if Resend API key is configured
+        if (!process.env.RESEND_API_KEY) {
+            console.error('[SEND-OTP] Resend API key not configured');
             // Clean up pending user since we can't send OTP
             await PendingUser.findOneAndDelete({ email });
             return res.status(500).json({ 

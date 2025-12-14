@@ -79,9 +79,9 @@ app.get("/healthcheck", async (req, res) => {
       health.status = 'degraded';
     }
 
-    // Check email configuration
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      health.services.email = 'configured';
+    // Check email configuration (Resend API)
+    if (process.env.RESEND_API_KEY) {
+      health.services.email = 'configured (Resend)';
     } else {
       health.services.email = 'not configured';
       health.status = 'degraded';

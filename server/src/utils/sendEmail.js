@@ -1,63 +1,37 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
 
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
-    // Validate email configuration
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error("Email credentials not configured in environment variables");
+    // Validate Resend API key
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY not configured in environment variables");
     }
 
     console.log(`[EMAIL] Attempting to send email to: ${to}`);
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      // Add timeout configuration
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 5000,    // 5 seconds
-      socketTimeout: 15000,     // 15 seconds
+    // Initialize Resend client
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    // Send email using Resend API
+    const { data, error } = await resend.emails.send({
+      from: 'Resumind AI <onboarding@resend.dev>', // Resend's default sender for testing
+      to: [to],
+      subject: subject,
+      html: html,
     });
 
-    // Verify transporter configuration
-    try {
-      await transporter.verify();
-      console.log('[EMAIL] SMTP connection verified successfully');
-    } catch (verifyError) {
-      console.error('[EMAIL] SMTP verification failed:', verifyError.message);
-      throw new Error(`SMTP connection failed: ${verifyError.message}`);
+    if (error) {
+      console.error('[EMAIL] Resend API error:', error);
+      throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`);
     }
 
-    // Send email with timeout
-    const sendPromise = transporter.sendMail({
-      from: `"Resumind AI 👻" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-      html,
-    });
+    console.log(`[EMAIL] Message sent successfully to ${to}. ID: ${data.id}`);
+    return { messageId: data.id, ...data };
 
-    // Add overall timeout of 30 seconds
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email sending timeout (30s)')), 30000);
-    });
-
-    const info = await Promise.race([sendPromise, timeoutPromise]);
-
-    console.log(`[EMAIL] Message sent successfully to ${to}. MessageId: ${info.messageId}`);
-    return info;
   } catch (error) {
     console.error(`[EMAIL] Failed to send email to ${to}:`, {
       error: error.message,
-      code: error.code,
-      command: error.command,
+      name: error.name,
       stack: error.stack
     });
     throw new Error(`Failed to send email: ${error.message}`);
