@@ -433,7 +433,10 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  isLoading: true,
+  // Important: on refresh we want ProtectedRoute to immediately attempt
+  // to hydrate auth from `GET /auth/me` (or redirect to login),
+  // instead of being stuck forever in the "loading" UI.
+  isLoading: false,
 };
 
 // ✅ Logout
