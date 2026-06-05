@@ -23,6 +23,7 @@ Your job is to analyze the following resume and return ONLY valid JSON with thes
 - Give 90+ only if it's nearly perfect.
 - Penalize vague descriptions, weak verbs, repetition, and lack of measurable results.
 - Score 60–80 for decent resumes, <60 for basic ones.
+- Important: Do NOT always return 0. Compute a realistic score from the resume content.
 
 ### Section Detection Rules:
 Only count these as "present" if explicitly labeled in the resume:
@@ -50,9 +51,12 @@ ${truncatedResumeText}
       ],
       title: "Resumind AI Resume Analyzer",
       timeout: 60000,
+      // Lower temperature tends to keep outputs closer to the requested JSON format.
+      temperature: 0.2,
     });
 
     let result = content;
+    const scoreFromRaw = extractAtsScoreFromText(content);
     console.log("✅ OpenRouter AI Raw Response:", result);
 
     result = result
@@ -77,8 +81,9 @@ ${truncatedResumeText}
       parsed = JSON.parse(result);
     } catch (e) {
       console.error("❌ JSON parse error:", e.message);
+      const normalizedScore = normalizeAtsScore(scoreFromRaw) ?? 0;
       return {
-        ats_score: 0,
+        ats_score: normalizedScore,
         suggestions: ["Unable to parse AI response. Please try again."],
         repeated_phrases: [],
         buzzwords: [],
@@ -88,6 +93,15 @@ ${truncatedResumeText}
         verdict_summary: "Analysis failed due to parsing error.",
         ai_warning: "Invalid JSON from OpenRouter.",
       };
+    }
+
+    // Ensure score is always a number between 0 and 100.
+    const normalizedFromParsed = normalizeAtsScore(parsed?.ats_score);
+    if (normalizedFromParsed === null) {
+      const fallbackScore = extractAtsScoreFromText(result) ?? scoreFromRaw;
+      parsed.ats_score = normalizeAtsScore(fallbackScore) ?? 0;
+    } else {
+      parsed.ats_score = normalizedFromParsed;
     }
 
     const fallbackMissing = checkMissingSections(truncatedResumeText);
@@ -106,8 +120,9 @@ ${truncatedResumeText}
     console.error("❌ OpenRouter API Error:", err.message);
     const errorResponse = getOpenRouterErrorResponse(err, truncatedResumeText);
 
+    const normalizedScore = normalizeAtsScore(errorResponse?.ats_score) ?? 0;
     return {
-      ats_score: 0,
+      ats_score: normalizedScore,
       repeated_phrases: [],
       buzzwords: [],
       action_verbs: [],
@@ -140,3 +155,30 @@ const isATSKeyword = (word) => {
   ];
   return atsTerms.some((term) => word.toLowerCase().includes(term));
 };
+
+function normalizeAtsScore(value) {
+  if (value === null || value === undefined) return null;
+
+  // Accept number-like values (including "85" or "85%").
+  const raw =
+    typeof value === "number"
+      ? value
+      : Number(String(value).replace(/[^\d.]/g, ""));
+
+  if (!Number.isFinite(raw)) return null;
+
+  // ATS score should be an integer percentage in [0, 100].
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+function extractAtsScoreFromText(text) {
+  if (!text) return null;
+
+  // Matches: "ats_score": 85, ats_score: "85", ats_score=85, etc.
+  const match =
+    String(text).match(/["']?ats_score["']?\s*[:=]\s*["']?(\d+(?:\.\d+)?)["']?/i) ||
+    String(text).match(/ATS\s*Score\s*[:=]\s*["']?(\d+(?:\.\d+)?)["']?/i);
+
+  if (!match) return null;
+  return normalizeAtsScore(match[1]);
+}
