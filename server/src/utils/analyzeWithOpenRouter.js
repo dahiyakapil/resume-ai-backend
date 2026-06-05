@@ -9,21 +9,22 @@ You are a strict and professional ATS resume analyzer trained on Resume Worded, 
 Your job is to analyze the following resume and return ONLY valid JSON with these exact keys:
 
 {
-  "ats_score": 0,
-  "suggestions": [],
-  "repeated_phrases": [],
-  "buzzwords": [],
-  "action_verbs": [],
-  "missing_sections": [],
-  "tone_analysis": "",
-  "verdict_summary": ""
+  "ats_score": <integer 1-100>,
+  "suggestions": ["string"],
+  "repeated_phrases": ["string"],
+  "buzzwords": ["string"],
+  "action_verbs": ["string"],
+  "missing_sections": ["string"],
+  "tone_analysis": "string",
+  "verdict_summary": "string"
 }
 
 ### ATS Scoring Rules:
+- ats_score MUST be an integer from 1 to 100. Never return 0.
 - Give 90+ only if it's nearly perfect.
 - Penalize vague descriptions, weak verbs, repetition, and lack of measurable results.
 - Score 60–80 for decent resumes, <60 for basic ones.
-- Important: Do NOT always return 0. Compute a realistic score from the resume content.
+- Compute a realistic score from the actual resume content below.
 
 ### Section Detection Rules:
 Only count these as "present" if explicitly labeled in the resume:
@@ -81,7 +82,7 @@ ${truncatedResumeText}
       parsed = JSON.parse(result);
     } catch (e) {
       console.error("❌ JSON parse error:", e.message);
-      const normalizedScore = normalizeAtsScore(scoreFromRaw) ?? 0;
+      const normalizedScore = resolveAtsScore(scoreFromRaw, truncatedResumeText);
       return {
         ats_score: normalizedScore,
         suggestions: ["Unable to parse AI response. Please try again."],
@@ -95,14 +96,18 @@ ${truncatedResumeText}
       };
     }
 
-    // Ensure score is always a number between 0 and 100.
-    const normalizedFromParsed = normalizeAtsScore(parsed?.ats_score);
-    if (normalizedFromParsed === null) {
-      const fallbackScore = extractAtsScoreFromText(result) ?? scoreFromRaw;
-      parsed.ats_score = normalizeAtsScore(fallbackScore) ?? 0;
-    } else {
-      parsed.ats_score = normalizedFromParsed;
-    }
+    const hasValidAnalysis =
+      (parsed.suggestions?.length > 0) ||
+      (parsed.buzzwords?.length > 0) ||
+      (parsed.verdict_summary?.length > 0);
+
+    const aiScore =
+      normalizeAtsScore(parsed?.ats_score) ??
+      normalizeAtsScore(parsed?.score) ??
+      extractAtsScoreFromText(result) ??
+      scoreFromRaw;
+
+    parsed.ats_score = resolveAtsScore(aiScore, truncatedResumeText, hasValidAnalysis);
 
     const fallbackMissing = checkMissingSections(truncatedResumeText);
     const mergedMissing = [...new Set([...(parsed.missing_sections || []), ...fallbackMissing])];
@@ -120,7 +125,7 @@ ${truncatedResumeText}
     console.error("❌ OpenRouter API Error:", err.message);
     const errorResponse = getOpenRouterErrorResponse(err, truncatedResumeText);
 
-    const normalizedScore = normalizeAtsScore(errorResponse?.ats_score) ?? 0;
+    const normalizedScore = resolveAtsScore(errorResponse?.ats_score, truncatedResumeText);
     return {
       ats_score: normalizedScore,
       repeated_phrases: [],
@@ -156,6 +161,58 @@ const isATSKeyword = (word) => {
   return atsTerms.some((term) => word.toLowerCase().includes(term));
 };
 
+function computeLocalAtsScore(text) {
+  if (!text || text.trim().length < 20) return 0;
+
+  const lower = text.toLowerCase();
+  let score = 30;
+
+  const sections = [
+    { pattern: /\bsummary\b/, points: 8 },
+    { pattern: /\bexperience\b/, points: 12 },
+    { pattern: /\bprojects?\b/, points: 10 },
+    { pattern: /\bskills?\b/, points: 10 },
+    { pattern: /\beducation\b/, points: 8 },
+    { pattern: /\bcertifications?\b/, points: 5 },
+    { pattern: /\b(awards?|honors?)\b/, points: 4 },
+  ];
+
+  for (const { pattern, points } of sections) {
+    if (pattern.test(lower)) score += points;
+  }
+
+  const actionVerbs = [
+    "developed", "built", "implemented", "designed", "led", "managed",
+    "created", "optimized", "achieved", "delivered", "engineered", "deployed",
+  ];
+  const verbHits = actionVerbs.filter((verb) => lower.includes(verb)).length;
+  score += Math.min(verbHits * 2, 12);
+
+  if (/\d+\s*%|\$\d+|\d+\+|\d{2,}/.test(text)) score += 8;
+  if (text.length > 1200) score += 5;
+  if (text.length > 2500) score += 3;
+
+  return Math.max(25, Math.min(100, Math.round(score)));
+}
+
+function resolveAtsScore(aiScore, resumeText, hasValidAnalysis = false) {
+  const normalized = normalizeAtsScore(aiScore);
+
+  if (normalized !== null && normalized > 0) {
+    return normalized;
+  }
+
+  if (hasValidAnalysis || normalized === null || normalized === 0) {
+    const localScore = computeLocalAtsScore(resumeText);
+    if (localScore > 0) {
+      console.log(`ℹ️ Using local ATS score fallback: ${localScore}`);
+      return localScore;
+    }
+  }
+
+  return normalized ?? 0;
+}
+
 function normalizeAtsScore(value) {
   if (value === null || value === undefined) return null;
 
@@ -177,6 +234,7 @@ function extractAtsScoreFromText(text) {
   // Matches: "ats_score": 85, ats_score: "85", ats_score=85, etc.
   const match =
     String(text).match(/["']?ats_score["']?\s*[:=]\s*["']?(\d+(?:\.\d+)?)["']?/i) ||
+    String(text).match(/["']?score["']?\s*[:=]\s*["']?(\d+(?:\.\d+)?)["']?/i) ||
     String(text).match(/ATS\s*Score\s*[:=]\s*["']?(\d+(?:\.\d+)?)["']?/i);
 
   if (!match) return null;
