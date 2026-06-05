@@ -1,45 +1,21 @@
-import axios from "axios";
+import { callOpenRouter } from "./openRouterClient.js";
 
 export const jobMatchDeepSeekResponse = async (prompt) => {
-  const modelId = `${process.env.OPENROUTER_MODEL}` 
-  const apiUrl = `${process.env.OPENROUTER_CHAT_COMPLETIONS}`;
-
   try {
-    const response = await axios.post(
-      apiUrl,
-      {
-        model: modelId,
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert resume-job match AI. Respond only in JSON.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
+    const { content, model } = await callOpenRouter({
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert resume-job match AI. Respond only in JSON.",
         },
-        timeout: 20000, // 20 seconds timeout
-      }
-    );
+        { role: "user", content: prompt },
+      ],
+      title: "Resumind AI Job Match",
+      timeout: 20000,
+    });
 
-    console.log("▶ Sending to OpenRouter (Job Match AI)");
-    console.log("▶ Model Used:", modelId);
-
-    const data = response.data;
-
-    if (data.error) {
-      console.error("❌ Error from OpenRouter:", data.error);
-      throw new Error("OpenRouter returned an error");
-    }
-
-    return data.choices[0].message.content;
+    console.log("▶ OpenRouter Job Match success, model:", model);
+    return content;
   } catch (error) {
     console.error("❌ OpenRouter Fetch Error:", error.message);
     throw new Error("Failed to get job match response");

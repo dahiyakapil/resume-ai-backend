@@ -184,15 +184,6 @@ export const analyzeResume = async (req, res) => {
     const aiReportRaw = await aiAnalysisPromise;
     const resumeUrl = await uploadPromise;
 
-    // Check if AI analysis failed critically
-    if (aiReportRaw.error && !aiReportRaw.ats_score) {
-      return res.status(500).json({
-        error: "AI analysis failed",
-        message: aiReportRaw.error,
-        resumeUrl
-      });
-    }
-
     // Step 7: Filter buzzwords
     const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
     const buzzwords = (aiReportRaw.buzzwords || [])
@@ -200,6 +191,7 @@ export const analyzeResume = async (req, res) => {
       .slice(0, 10);
 
     const aiReport = { ...aiReportRaw, buzzwords };
+    const aiWarning = aiReportRaw.ai_warning || aiReportRaw.error || null;
 
     // Step 8: Save report
     const savedReport = await ResumeReport.create({
@@ -215,13 +207,16 @@ export const analyzeResume = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Resume analyzed and saved successfully",
+      message: aiWarning
+        ? "Resume saved with limited AI analysis"
+        : "Resume analyzed and saved successfully",
       resumeUrl,
       analysis: aiReport,
       rewrites: savedReport.rewrites,
       reportId: savedReport._id,
       createdAt: savedReport.createdAt,
       resumeName,
+      warning: aiWarning,
     });
   } catch (err) {
     console.error("❌ Resume analysis failed:", err);
@@ -297,15 +292,6 @@ export const aiSuggestionAnalyzeResume = async (req, res) => {
     const aiReportRaw = await aiAnalysisPromise;
     const resumeUrl = await uploadPromise;
 
-    // Check if AI analysis failed critically
-    if (aiReportRaw.error && !aiReportRaw.ats_score) {
-      return res.status(500).json({
-        error: "AI analysis failed",
-        message: aiReportRaw.error,
-        resumeUrl
-      });
-    }
-
     // Step 7: Filter buzzwords
     const atsKeywords = ["summary", "experience", "project", "skill", "education", "certification", "award", "honor"];
     const buzzwords = (aiReportRaw.buzzwords || [])
@@ -313,6 +299,7 @@ export const aiSuggestionAnalyzeResume = async (req, res) => {
       .slice(0, 10);
 
     const aiReport = { ...aiReportRaw, buzzwords };
+    const aiWarning = aiReportRaw.ai_warning || aiReportRaw.error || null;
 
     // Step 8: Save report
     const savedReport = await ResumeReport.create({
@@ -328,13 +315,16 @@ export const aiSuggestionAnalyzeResume = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Resume analyzed and saved successfully",
+      message: aiWarning
+        ? "Resume saved with limited AI analysis"
+        : "Resume analyzed and saved successfully",
       resumeUrl,
       analysis: aiReport,
       rewrites: savedReport.rewrites,
       reportId: savedReport._id,
       createdAt: savedReport.createdAt,
       resumeName,
+      warning: aiWarning,
     });
   } catch (err) {
     console.error("❌ Resume analysis failed:", err);
